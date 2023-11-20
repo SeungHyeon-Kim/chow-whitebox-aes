@@ -704,12 +704,12 @@ inline void state2byte(u32 state[4], byte b[16]) {
 
 //=====
 // 32비트 암호/복호화 중간값(state) 출력
-void AES32_print_state(u32 state[4]) {
-	for (int k = 0; k < 4; k++) {
-		printf("%08x ", state[k]);
-	}
-	printf("\n");
-}
+// void AES32_print_state(u32 state[4]) {
+// 	for (int k = 0; k < 4; k++) {
+// 		printf("%08x ", state[k]);
+// 	}
+// 	printf("\n");
+// }
 
 //=====
 // AES32 암호화 라운드함수

@@ -8,10 +8,6 @@
 #define AES_128_KEY          16
 #define AES_128_ROUND_KEY   176
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 typedef unsigned char byte;
 typedef unsigned char u8;
 typedef unsigned int u32;
@@ -24,7 +20,7 @@ typedef unsigned int u32;
 
 void byte2state(byte b[16], u32 state[4]);
 void state2byte(u32 state[4], byte b[16]);
-void AES32_print_state(u32 state[4]);
+// void AES32_print_state(u32 state[4]);
 void AES32_round(u32 state[4], u32 rk[4]);
 void AES32_EqInv_round(u32 state[4], u32 rk[4]);
 void AES32_Encrypt(byte pt[16], u32 rk[11][4], byte ct[16]);
@@ -37,9 +33,5 @@ u32 SubWord(u32 w32);
 void AES32_Enc_KeySchedule(byte k[16], u32 rk[11][4]);
 void AES32_Dec_KeySchedule(byte k[16], u32 rk[11][4]);
 void AES8_KeySchedule(byte k[16], byte rk[11][16]);
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif /* AES_H */

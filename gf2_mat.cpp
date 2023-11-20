@@ -162,11 +162,11 @@ template <typename T>
 T vec_GF2_to_scalar(const NTL::vec_GF2 &src) {
     int j;
     long len = src.length() >> 2;
-    T ret;
+    T ret = 0;
 
     for (j = 0; j < len; j++) {
-        (ret <<= 4) | NTL::rep(src[j*4  ]) << 3 | NTL::rep(src[j*4+1]) << 2 
-                    | NTL::rep(src[j*4+2]) << 2 | NTL::rep(src[j*4+3]) << 1;
+        ret = ret << 4 | NTL::rep(src[j*4  ]) << 3 | NTL::rep(src[j*4+1]) << 2 
+                       | NTL::rep(src[j*4+2]) << 2 | NTL::rep(src[j*4+3]) << 1;
     }
 
     return ret;
