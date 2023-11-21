@@ -3,6 +3,8 @@
         - Encrypt on the whiteboxing algorithm
 */
 
+#define DEBUG_OUT 1
+
 #include <iostream>
 #include "wbaes.h"
 
@@ -43,22 +45,31 @@ void ref_table(uint32_t uint32_tables[16][256], uint8_t xor_tables[96][16][16], 
         d = uint32_tables[i*4+3][in[i*4+3]];
 
         in[i*4  ] = (
-            (xor_tables[i*24+4 ][xor_tables[i*24   ][(a >> 28) & 0xf][(b >> 28) & 0xf]][xor_tables[i*24+1][(c >> 28) & 0xf][(d >> 28) & 0xf]]) << 4 |
-            (xor_tables[i*24+5 ][xor_tables[i*24+2 ][(a >> 24) & 0xf][(b >> 24) & 0xf]][xor_tables[i*24+3][(c >> 24) & 0xf][(d >> 24) & 0xf]])
+            (xor_tables[i*24+4 ][xor_tables[i*24   ][(a >> 28) & 0xf][(b >> 28) & 0xf]][xor_tables[i*24+1 ][(c >> 28) & 0xf][(d >> 28) & 0xf]]) << 4 |
+            (xor_tables[i*24+5 ][xor_tables[i*24+2 ][(a >> 24) & 0xf][(b >> 24) & 0xf]][xor_tables[i*24+3 ][(c >> 24) & 0xf][(d >> 24) & 0xf]])
         );
         in[i*4+1] = (
             (xor_tables[i*24+10][xor_tables[i*24+6 ][(a >> 20) & 0xf][(b >> 20) & 0xf]][xor_tables[i*24+7 ][(c >> 20) & 0xf][(d >> 20) & 0xf]]) << 4 |
             (xor_tables[i*24+11][xor_tables[i*24+8 ][(a >> 16) & 0xf][(b >> 16) & 0xf]][xor_tables[i*24+9 ][(c >> 16) & 0xf][(d >> 16) & 0xf]])
         );
         in[i*4+2] = (
-            (xor_tables[i*24+16][xor_tables[i*24+12][(a >> 12) & 0xf][(b >> 12) & 0xf]][xor_tables[i*24+12][(c >> 12) & 0xf][(d >> 12) & 0xf]]) << 4 |
-            (xor_tables[i*24+17][xor_tables[i*24+13][(a >>  8) & 0xf][(b >>  8) & 0xf]][xor_tables[i*24+14][(c >>  8) & 0xf][(d >>  8) & 0xf]])
+            (xor_tables[i*24+16][xor_tables[i*24+12][(a >> 12) & 0xf][(b >> 12) & 0xf]][xor_tables[i*24+13][(c >> 12) & 0xf][(d >> 12) & 0xf]]) << 4 |
+            (xor_tables[i*24+17][xor_tables[i*24+14][(a >>  8) & 0xf][(b >>  8) & 0xf]][xor_tables[i*24+15][(c >>  8) & 0xf][(d >>  8) & 0xf]])
         );
         in[i*4+3] = (
             (xor_tables[i*24+22][xor_tables[i*24+18][(a >>  4) & 0xf][(b >>  4) & 0xf]][xor_tables[i*24+19][(c >>  4) & 0xf][(d >>  4) & 0xf]]) << 4 |
             (xor_tables[i*24+23][xor_tables[i*24+20][(a      ) & 0xf][(b      ) & 0xf]][xor_tables[i*24+21][(c      ) & 0xf][(d      ) & 0xf]])
         );
     }
+    #if DEBUG_OUT
+        printf("-- ref_table output\t");
+        int j;
+        
+        for (j = 0; j < 16; j++) {
+            printf("%02x:", in[j]);
+        }
+        printf("\n");
+    #endif
 }
 
 void wbaes_encrypt(WBAES_ENCRYPTION_TABLE &et, uint8_t *pt) {
@@ -68,6 +79,16 @@ void wbaes_encrypt(WBAES_ENCRYPTION_TABLE &et, uint8_t *pt) {
         shift_rows(pt);
         ref_table(et.ty_boxes[r]  , et.xor_tables[r], pt);
         ref_table(et.mbl_tables[r], et.xor_tables[r], pt);
+    
+        #if DEBUG_OUT
+        printf("-- wbaes_encrypt round output\t");
+        int j;
+        
+        for (j = 0; j < 16; j++) {
+            printf("%02x:", pt[j]);
+        }
+        printf("\n");
+        #endif
     }
     shift_rows(pt);
 
@@ -86,4 +107,14 @@ void wbaes_encrypt(WBAES_ENCRYPTION_TABLE &et, uint8_t *pt) {
     pt[13] = et.last_box[13][pt[13]];
     pt[14] = et.last_box[14][pt[14]];
     pt[15] = et.last_box[15][pt[15]];
+
+#if DEBUG_OUT
+    printf("-- wbaes_encrypt final output\t");
+    int j;
+    
+    for (j = 0; j < 16; j++) {
+        printf("%02x:", pt[j]);
+    }
+    printf("\n");
+#endif
 }

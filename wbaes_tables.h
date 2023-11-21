@@ -49,9 +49,9 @@ struct WBAES_ENCRYPTION_TABLE {
 };
 
 void gen_xor_tables(uint8_t (*xor_tables)[96][16][16]);
-void gen_t_boxes(uint8_t t_boxes[][16][256], uint8_t *roundkeys);
-void gen_tyi_tables(uint32_t tyi_tables[][256]);
-void composite_t_tyi(uint8_t t_boxes[][16][256], uint32_t tyi_tables[][256], uint32_t ty_boxes[][16][256], uint8_t last_box[][256]);
+void gen_t_boxes(uint8_t (*t_boxes)[16][256], uint8_t *roundkeys);
+void gen_tyi_tables(uint32_t (*tyi_tables)[256]);
+void composite_t_tyi(uint8_t (*t_boxes)[16][256], uint32_t (*tyi_tables)[256], uint32_t (*ty_boxes)[16][256], uint8_t (*last_box)[256]);
 
 void gen_encryption_table(WBAES_ENCRYPTION_TABLE &et, uint8_t *roundkeys);
 

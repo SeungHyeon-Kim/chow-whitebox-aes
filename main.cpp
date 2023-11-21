@@ -5,7 +5,6 @@
 */
 
 #include <iostream>
-#include <iomanip>
 
 #include "aes.h"
 #include "wbaes.h"
@@ -23,27 +22,41 @@ void dump_hex(const uint8_t *in, const size_t size) {
     }
 }
 
+void dump_hex(const uint32_t *in, const size_t size) {
+    size_t i;
+
+    for (i = 0; i < size; i++) {
+        printf("%08x:", in[i]);
+
+        if ( (i + 1) % 4 == 0 ) {
+            printf("\n");
+        }
+    }
+}
+
 int main(void) {
-    uint8_t aes_key[AES_128_KEY] = {0x00, };
-    uint32_t aes_roundkey[11][4];
+    uint8_t   u8_aes_key[AES_128_KEY  ] = {0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6, 0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f, 0x3c};
+    uint8_t   u8_round_key[176];
+    uint32_t u32_round_key[11][4];
+    
     WBAES_ENCRYPTION_TABLE *et = new WBAES_ENCRYPTION_TABLE();
 
-    AES32_Enc_KeySchedule(aes_key, aes_roundkey);
-    gen_encryption_table(*et, (uint8_t *)aes_roundkey);
+    AES32_Enc_KeySchedule(u8_aes_key, u32_round_key);
+    memcpy(u8_round_key, (uint8_t *)u32_round_key, 176);
+    gen_encryption_table(*et, u8_round_key);
 
-    et->write("et.bin");
-
-    dump_hex((uint8_t *)aes_roundkey , AES_128_ROUND_KEY);
-
-
+    // et->write("et.bin");
     
-    uint8_t pt1[16]{}, pt2[16]{}, ct[16]{};
+    uint8_t pt1[16] = {0x6b, 0xc1, 0xbe, 0xe2, 0x2e, 0x40, 0x9f, 0x96, 0xe9, 0x3d, 0x7e, 0x11, 0x73, 0x93, 0x17, 0x2a}, 
+            pt2[16]{}, ct[16]{};
+    memcpy(pt2, pt1, 16);
     
-    AES32_Encrypt(pt1, aes_roundkey, ct);
+    AES32_Encrypt(pt1, u32_round_key, ct);
     wbaes_encrypt(*et, pt2);
 
     printf("AES32 OUTPUT: \n");
     dump_hex(ct , AES_128_BLOCK);
+    
     printf("WBAES OUTPUT: \n");
     dump_hex(pt2, AES_128_BLOCK);
 
