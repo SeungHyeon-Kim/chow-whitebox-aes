@@ -3,21 +3,10 @@
         - Encrypt on the whiteboxing algorithm
 */
 
-#define DEBUG_OUT 1
-
 #include <iostream>
+
 #include "wbaes.h"
-
-void shift_rows(uint8_t *in) {
-    int i;
-    uint8_t temp[16];
-
-    memcpy(temp, in, 16);
-
-    for (i = 0; i < 16; i++) {
-        in[i] = temp[shift_map[i]];
-    }
-}
+#include "debug.h"
 
 /*
     A Tutorial on Whitebox AES
@@ -34,11 +23,11 @@ void shift_rows(uint8_t *in) {
         chipertext = state
 */
 
-void ref_table(uint32_t uint32_tables[16][256], uint8_t xor_tables[96][16][16], uint8_t *in) {
+static void ref_table(uint32_t uint32_tables[16][256], uint8_t xor_tables[96][16][16], uint8_t *in) {
     int i;
     uint32_t a, b, c, d;
 
-    for (i = 0; i < AES_128_BLOCK/4; i++) {
+    for (i = 0; i < 4; i++) {
         a = uint32_tables[i*4  ][in[i*4  ]];
         b = uint32_tables[i*4+1][in[i*4+1]];
         c = uint32_tables[i*4+2][in[i*4+2]];
@@ -61,34 +50,15 @@ void ref_table(uint32_t uint32_tables[16][256], uint8_t xor_tables[96][16][16], 
             (xor_tables[i*24+23][xor_tables[i*24+20][(a      ) & 0xf][(b      ) & 0xf]][xor_tables[i*24+21][(c      ) & 0xf][(d      ) & 0xf]])
         );
     }
-    #if DEBUG_OUT
-        printf("-- ref_table output\t");
-        int j;
-        
-        for (j = 0; j < 16; j++) {
-            printf("%02x:", in[j]);
-        }
-        printf("\n");
-    #endif
 }
 
 void wbaes_encrypt(WBAES_ENCRYPTION_TABLE &et, uint8_t *pt) {
-    int r, i;
+    int r;
 
-    for (r = 0; r < AES_128_ROUND-1; r++) {
+    for (r = 0; r < 9; r++) {
         shift_rows(pt);
         ref_table(et.ty_boxes[r]  , et.xor_tables[r], pt);
         ref_table(et.mbl_tables[r], et.xor_tables[r], pt);
-    
-        #if DEBUG_OUT
-        printf("-- wbaes_encrypt round output\t");
-        int j;
-        
-        for (j = 0; j < 16; j++) {
-            printf("%02x:", pt[j]);
-        }
-        printf("\n");
-        #endif
     }
     shift_rows(pt);
 
@@ -107,14 +77,4 @@ void wbaes_encrypt(WBAES_ENCRYPTION_TABLE &et, uint8_t *pt) {
     pt[13] = et.last_box[13][pt[13]];
     pt[14] = et.last_box[14][pt[14]];
     pt[15] = et.last_box[15][pt[15]];
-
-#if DEBUG_OUT
-    printf("-- wbaes_encrypt final output\t");
-    int j;
-    
-    for (j = 0; j < 16; j++) {
-        printf("%02x:", pt[j]);
-    }
-    printf("\n");
-#endif
 }

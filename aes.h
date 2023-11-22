@@ -3,11 +3,6 @@
 
 #include <stdint.h>
 
-#define AES_128_BLOCK        16
-#define AES_128_ROUND        10
-#define AES_128_KEY          16
-#define AES_128_ROUND_KEY   176
-
 typedef unsigned char byte;
 typedef unsigned char u8;
 typedef unsigned int u32;
