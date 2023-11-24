@@ -176,7 +176,7 @@ void gen_nonlinear_encoding(WBAES_NONLINEAR_ENCODING &en) {
     
 }
 
-void gen_xor_tables(uint8_t (*xor_tables)[96][16][16]) {
+void gen_xor_tables(uint8_t (*i_xor_tables)[16][16], uint8_t (*xor_tables)[96][16][16]) {
     int r, n, x, y;
 
     for (r = 0; r < 9; r++) {
@@ -189,13 +189,13 @@ void gen_xor_tables(uint8_t (*xor_tables)[96][16][16]) {
         }
     }
 
-    // for (n = 0; n < 480; n++) {
-    //     for (x = 0; x < 16; x++) {
-    //         for (y = 0; y < 16; y++) {
-    //             ia_xor_tables[n][x][y] = x ^ y;
-    //         }
-    //     }
-    // }
+    for (n = 0; n < 960; n++) {
+        for (x = 0; x < 16; x++) {
+            for (y = 0; y < 16; y++) {
+                i_xor_tables[n][x][y] = x ^ y;
+            }
+        }
+    }
 }
 
 void gen_t_boxes(uint8_t (*t_boxes)[16][256], uint32_t *roundkeys, WBAES_NONLINEAR_ENCODING &en) {
@@ -252,6 +252,15 @@ void composite_t_tyi(uint8_t (*t_boxes)[16][256], uint32_t (*tyi_tables)[256], u
 
     /* Round-10 */
     memcpy(last_box, t_boxes[9], 16 * 256);
+}
+
+void gen_ia_table(uint8_t (*ia_table)[256]) {
+    int n, x;
+    for (n = 0; n < 16; n++) {
+        for (x = 0; x < 256; x++) {
+            ia_table[n][x] = x;
+        }
+    }
 }
 
 void apply_encoding(WBAES_ENCRYPTION_TABLE &et, WBAES_NONLINEAR_ENCODING &en) {
@@ -323,21 +332,17 @@ void apply_encoding(WBAES_ENCRYPTION_TABLE &et, WBAES_NONLINEAR_ENCODING &en) {
     /*
         Applies L to inverse of L at previous round
     */
-    cl0.SetDims(128, 128);
-    
-
     for (r = 0; r < 16; r++) {
-        for (n = 0; n < 8; n++) {
-            for (x = 0; x < 8; x++) {
-                sl[(r*8)+n][(r*8)+x] = l[0][r][n][x];
-            }
+        l0[r] = gen_gf2_rand_invertible_matrix(8);
+        for (x = 0; x < 256; x++) {
+            et.ia_table[r][x] = mul<uint8_t>(l0[r], (uint8_t)(et.ia_table[r][x]));
         }
     }
 
     for (n = 0; n < 16; n++) {
         memcpy(u32_temp, et.ty_boxes[0][n], 1024);
         for (x = 0; x < 256; x++) {
-            et.ty_boxes[0][n][x] = u32_temp[mul<uint8_t>(NTL::)]
+            et.ty_boxes[0][n][x] = u32_temp[mul<uint8_t>(NTL::inv(l0[shift_map[n]]), (uint8_t)x)];
         }
     }
 
@@ -370,7 +375,7 @@ void gen_encryption_table(WBAES_ENCRYPTION_TABLE &et, WBAES_NONLINEAR_ENCODING &
         Generates T-boxes depend on round keys, 
             Tyi-table and complex them. 
     */
-    gen_xor_tables(et.xor_tables);
+    gen_xor_tables(et.i_xor_tables, et.xor_tables);
     gen_t_boxes(t_boxes, roundkeys, en);
     gen_tyi_tables(tyi_table);
     composite_t_tyi(t_boxes, tyi_table, et.ty_boxes, et.last_box);

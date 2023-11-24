@@ -10,9 +10,9 @@
     Whitebox AES Tables
 */
 struct WBAES_ENCRYPTION_TABLE {
-    // uint8_t             ia[32][256][16]  ;
+    uint8_t       ia_table[16][256]      ;
     uint8_t       last_box[16][256]      ;
-    // uint8_t  ia_xor_tables[480][16][16]  ;
+    uint8_t   i_xor_tables[960][16][16]  ;
     uint8_t     xor_tables[9][96][16][16];
     uint32_t    mbl_tables[9][16][256]   ;
     uint32_t      ty_boxes[9][16][256]   ;
@@ -67,8 +67,8 @@ struct WBAES_NONLINEAR_ENCODING {
     uint8_t inv_int_l[16][4][8][16];
 };
 
-void encode_ext_x(uint8_t *f, uint8_t *x);
-void decode_ext_x(uint8_t *inv_f, uint8_t *x);
+void encode_ext_x(uint8_t (*f)[8][16], uint8_t *x);
+void decode_ext_x(uint8_t (*inv_f)[8][16], uint8_t *x);
 
 void gen_encryption_table(WBAES_ENCRYPTION_TABLE &et, WBAES_NONLINEAR_ENCODING &en, uint32_t *roundkeys);
 

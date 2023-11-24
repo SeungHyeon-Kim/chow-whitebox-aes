@@ -37,6 +37,10 @@ static void shift_rows(uint8_t *x) {
     }
 }
 
+static void before(uint8_t (*ia_table)[256], uint8_t (*xor_tables)[16][16], uint8_t *in) {
+    
+}
+
 static void ref_table(uint32_t uint32_tables[16][256], uint8_t xor_tables[96][16][16], uint8_t *in) {
     int i;
     uint32_t a, b, c, d;
@@ -68,6 +72,8 @@ static void ref_table(uint32_t uint32_tables[16][256], uint8_t xor_tables[96][16
 
 void wbaes_encrypt(WBAES_ENCRYPTION_TABLE &et, uint8_t *pt) {
     int r;
+
+
 
     for (r = 0; r < 9; r++) {
         shift_rows(pt);
