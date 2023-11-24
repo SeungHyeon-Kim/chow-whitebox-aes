@@ -13,12 +13,14 @@
 
 int main(void) {
     uint8_t   u8_aes_key[16] = {0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6, 0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f, 0x3c};
-    uint32_t  u32_round_key[11][4];
+    uint32_t  u32_round_key[11][4], u32_inv_round_key[11][4];
     
-    WBAES_ENCRYPTION_TABLE *et = new WBAES_ENCRYPTION_TABLE();
+    WBAES_ENCRYPTION_TABLE   *et = new WBAES_ENCRYPTION_TABLE();
+    WBAES_NONLINEAR_ENCODING *en = new WBAES_NONLINEAR_ENCODING();
 
     AES32_Enc_KeySchedule(u8_aes_key, u32_round_key);
-    gen_encryption_table(*et, (uint32_t *)u32_round_key);
+    AES32_Dec_KeySchedule(u8_aes_key, u32_inv_round_key);
+    gen_encryption_table(*et, *en, (uint32_t *)u32_round_key);
 
     et->write("et.bin");
     
@@ -35,6 +37,9 @@ int main(void) {
     printf("WBAES OUTPUT: \n");
     dump_bytes(pt2, 16);
 
+    AES32_EqDecrypt(pt2, u32_inv_round_key, ct);
+
     delete et;
+    delete en;
     return 0;
 }

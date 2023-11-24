@@ -8,6 +8,9 @@
 #include "wbaes.h"
 #include "debug.h"
 
+extern uint8_t     shift_map[16];
+extern uint8_t inv_shift_map[16];
+
 /*
     A Tutorial on Whitebox AES
             J.A. Muir
@@ -22,6 +25,17 @@
         TBoxes(state, 10)           ----- last_box
         chipertext = state
 */
+
+static void shift_rows(uint8_t *x) {
+    int i;
+    uint8_t temp[16];
+
+    memcpy(temp, x, 16);
+
+    for (i = 0; i < 16; i++) {
+        x[i] = temp[shift_map[i]];
+    }
+}
 
 static void ref_table(uint32_t uint32_tables[16][256], uint8_t xor_tables[96][16][16], uint8_t *in) {
     int i;
@@ -73,6 +87,7 @@ void wbaes_encrypt(WBAES_ENCRYPTION_TABLE &et, uint8_t *pt) {
     pt[8 ] = et.last_box[8 ][pt[8 ]];
     pt[9 ] = et.last_box[9 ][pt[9 ]];
     pt[10] = et.last_box[10][pt[10]];
+    pt[11] = et.last_box[11][pt[11]];
     pt[12] = et.last_box[12][pt[12]];
     pt[13] = et.last_box[13][pt[13]];
     pt[14] = et.last_box[14][pt[14]];

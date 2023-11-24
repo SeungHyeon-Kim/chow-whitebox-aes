@@ -4,9 +4,8 @@
 #include <stdint.h>
 
 typedef unsigned char byte;
-typedef unsigned char u8;
-typedef unsigned int u32;
-
+typedef unsigned char   u8;
+typedef unsigned int   u32;
 
 //==== from (rijndael-alg-fst.h)
 #define GETU32(pt) (((u32)(pt)[0] << 24) ^ ((u32)(pt)[1] << 16) ^ ((u32)(pt)[2] <<  8) ^ ((u32)(pt)[3]))
