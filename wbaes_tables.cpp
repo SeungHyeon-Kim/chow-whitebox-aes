@@ -91,20 +91,19 @@ void add_rk(uint8_t *x, uint32_t *rk) {
     }
 }
 
-void encode_ext_x(uint8_t (*f)[8][16], uint8_t *x) {
-    int i, j;
+void encode_ext_x(uint8_t (*f)[2][16], uint8_t *x) {
+    int i;
 
     for (i = 0; i < 16; i++) {
-        x[i] = f[i>>2][(j+1)%8][(x[i] >> 4) & 0xf] << 4 | f[i>>2][j%8][x[i] & 0xf];
+        x[i] = f[i][1][(x[i] >> 4) & 0xf] << 4 | f[i][0][x[i] & 0xf];
     }
 }
 
-void decode_ext_x(uint8_t (*inv_f)[8][16], uint8_t *x) {
-    int i, j = 0;
+void decode_ext_x(uint8_t (*inv_f)[2][16], uint8_t *x) {
+    int i;
 
     for (i = 0; i < 16; i++) {
-        x[i] = inv_f[i>>2][(j+1)%8][(x[i] >> 4) & 0xf] << 4 | inv_f[i>>2][j%8][x[i] & 0xf];
-        j += 2;
+        x[i] = inv_f[i][1][(x[i] >> 4) & 0xf] << 4 | inv_f[i][0][x[i] & 0xf];
     }
 }
 
@@ -114,54 +113,77 @@ void gen_nonlinear_encoding(WBAES_NONLINEAR_ENCODING &en) {
     /*
         External Encoding
     */
-    for (i = 0; i < 4; i++) {
-        for (j = 0; j < 8; j++) {
+    for (i = 0; i < 16; i++) {
+        for (j = 0; j < 2; j++) {
             gen_rand(en.ext_f[i][j], en.inv_ext_f[i][j]);
         }
     }
 
     /*
-        Internal Encoding - I
-         before start round
+        Internal Encoding (IA, XOR-128 x 15)
+         - IA type   16 x 16 x 2 x 16
+         - XOR table 15 x 32 x 16
     */
-    // for (i = 0; i < 16; i++) {
-    //     for (j = 0; j < 4; j++) {
-    //         for (k = 0; k < 8; k++) {
-    //             gen_rand(en.int_f[i][j][k], en.inv_int_f[i][j][k]);
-    //         }
-    //     }
-    // }
+    for (i = 0; i < 16; i++) {      // encoding for the output of IA-tables
+        for (j = 0; j < 16; j++) {
+            for (k = 0; k < 2; k++) {
+                gen_rand(en.int_f[i][j][k], en.inv_int_f[i][j][k]);
+            }
+        }
+    }
+
+    for (i = 0; i < 15; i++) {      // encoding for the output of xor-tables
+        for (j = 0; j < 32; j++) {
+            gen_rand(en.int_outf[i][j], en.inv_int_outf[i][j]);
+        }
+    }
+
+    for (i = 0; i < 8; i++) {
+        for (j = 0; j < 16; j++) {
+            memcpy(en.int_xf[i][(j<<1)], en.inv_int_f[(i<<1)  ][j][1], 16); memcpy(en.int_xf[i][(j<<1)+1], en.inv_int_f[(i<<1)  ][j][0], 16);
+            memcpy(en.int_yf[i][(j<<1)], en.inv_int_f[(i<<1)+1][j][1], 16); memcpy(en.int_yf[i][(j<<1)+1], en.inv_int_f[(i<<1)+1][j][0], 16);
+        }
+    }
+    for (j = 0; j < 32; j++) {
+        memcpy(en.int_xf[ 8][j], en.inv_int_outf[ 0][j], 16); memcpy(en.int_yf[ 8][j], en.inv_int_outf[ 1][j], 16);     // 8th xor
+        memcpy(en.int_xf[ 9][j], en.inv_int_outf[ 2][j], 16); memcpy(en.int_yf[ 9][j], en.inv_int_outf[ 3][j], 16);     // 9th
+        memcpy(en.int_xf[10][j], en.inv_int_outf[ 4][j], 16); memcpy(en.int_yf[10][j], en.inv_int_outf[ 5][j], 16);     // ...
+        memcpy(en.int_xf[11][j], en.inv_int_outf[ 6][j], 16); memcpy(en.int_yf[11][j], en.inv_int_outf[ 7][j], 16);
+        memcpy(en.int_xf[12][j], en.inv_int_outf[ 8][j], 16); memcpy(en.int_yf[12][j], en.inv_int_outf[ 9][j], 16);
+        memcpy(en.int_xf[13][j], en.inv_int_outf[10][j], 16); memcpy(en.int_yf[13][j], en.inv_int_outf[11][j], 16);
+        memcpy(en.int_xf[14][j], en.inv_int_outf[12][j], 16); memcpy(en.int_yf[14][j], en.inv_int_outf[13][j], 16);     // 14th
+    }
 
     /*
         Internal Encoding - II
          ty_boxes
          round 1 ~ 9
     */
-    for (j = 0; j < 16; j++) {
-        memcpy(en.int_g[0][j]    , en.inv_ext_f, 16);
-        memcpy(en.inv_int_g[0][j], en.ext_f    , 16);
-    }
+    // for (j = 0; j < 16; j++) {
+    //     memcpy(en.int_g[0][j]    , en.inv_ext_f, 16);
+    //     memcpy(en.inv_int_g[0][j], en.ext_f    , 16);
+    // }
     
-    for (i = 1; i < 9; i++) {
-        for (j = 0; j < 16; j++) {
-            for (k = 0; k < 8; k++) {
-                gen_rand(en.int_g[i][j][k], en.inv_int_g[i][j][k]);
-            }
-        }
-    }
+    // for (i = 1; i < 9; i++) {
+    //     for (j = 0; j < 16; j++) {
+    //         for (k = 0; k < 8; k++) {
+    //             gen_rand(en.int_g[i][j][k], en.inv_int_g[i][j][k]);
+    //         }
+    //     }
+    // }
 
     /*
         Internal Encoding - III
          mbl_tables
          round 1 ~ 9
     */
-    for (i = 0; i < 9; i++) {
-        for (j = 0; j < 16; j++) {
-            for (k = 0; k < 4; k++) {
-                gen_rand(en.int_h[i][j][k], en.inv_int_h[i][j][k]);
-            }
-        }
-    }
+    // for (i = 0; i < 9; i++) {
+    //     for (j = 0; j < 16; j++) {
+    //         for (k = 0; k < 4; k++) {
+    //             gen_rand(en.int_h[i][j][k], en.inv_int_h[i][j][k]);
+    //         }
+    //     }
+    // }
 
     /*
         Internal Encoding - IV
@@ -176,7 +198,7 @@ void gen_nonlinear_encoding(WBAES_NONLINEAR_ENCODING &en) {
     
 }
 
-void gen_xor_tables(uint8_t (*i_xor_tables)[16][16], uint8_t (*xor_tables)[96][16][16]) {
+void gen_xor_tables(uint8_t (*i_xor_tables)[16][16], uint8_t (*xor_tables)[96][16][16], const WBAES_NONLINEAR_ENCODING &en) {
     int r, n, x, y;
 
     for (r = 0; r < 9; r++) {
@@ -188,10 +210,29 @@ void gen_xor_tables(uint8_t (*i_xor_tables)[16][16], uint8_t (*xor_tables)[96][1
             }
         }
     }
+    
+    /*
+        IA type -> XOR-128
+    */
+    for (n = 0; n < 256; n++) {
+        int i = n >> 5;
+        int j = n % 32;
 
-    for (n = 0; n < 960; n++) {
+        // printf("%d, %d\n", i, j);
+
         for (x = 0; x < 16; x++) {
             for (y = 0; y < 16; y++) {
+                i_xor_tables[n][x][y] = x ^ y;
+                // i_xor_tables[n][x][y] = en.int_outf[i][j][((en.int_xf[i][j][x]) & 0xf) ^ ((en.int_yf[i][j][y]) & 0xf)] & 0xf;
+                // i_xor_tables[n][x][y] = ((en.int_xf[i][j][x]) & 0xf) ^ ((en.int_yf[i][j][y]) & 0xf);
+            }
+        }
+    }
+
+    for (n = 256; n < 480; n++) {   // 448
+        for(x = 0; x < 16; x++) {
+            for (y = 0; y < 16; y++) {
+                // i_xor_tables[n][x][y] = en.int_xf[(n>>5)][(n%32)][x] ^ en.int_yf[(n>>5)][(n%32)][y];
                 i_xor_tables[n][x][y] = x ^ y;
             }
         }
@@ -332,17 +373,28 @@ void apply_encoding(WBAES_ENCRYPTION_TABLE &et, WBAES_NONLINEAR_ENCODING &en) {
     /*
         Applies L to inverse of L at previous round
     */
+    l0[0 ] = gen_gf2_rand_invertible_matrix(8); l0[1 ] = gen_gf2_rand_invertible_matrix(8);
+    l0[2 ] = gen_gf2_rand_invertible_matrix(8); l0[3 ] = gen_gf2_rand_invertible_matrix(8);
+    l0[4 ] = gen_gf2_rand_invertible_matrix(8); l0[5 ] = gen_gf2_rand_invertible_matrix(8);
+    l0[6 ] = gen_gf2_rand_invertible_matrix(8); l0[7 ] = gen_gf2_rand_invertible_matrix(8);
+    l0[8 ] = gen_gf2_rand_invertible_matrix(8); l0[9 ] = gen_gf2_rand_invertible_matrix(8);
+    l0[10] = gen_gf2_rand_invertible_matrix(8); l0[11] = gen_gf2_rand_invertible_matrix(8);
+    l0[12] = gen_gf2_rand_invertible_matrix(8); l0[13] = gen_gf2_rand_invertible_matrix(8);
+    l0[14] = gen_gf2_rand_invertible_matrix(8); l0[15] = gen_gf2_rand_invertible_matrix(8);
+
     for (r = 0; r < 16; r++) {
-        l0[r] = gen_gf2_rand_invertible_matrix(8);
         for (x = 0; x < 256; x++) {
-            et.ia_table[r][x] = mul<uint8_t>(l0[r], (uint8_t)(et.ia_table[r][x]));
+            uint8_t y = en.inv_ext_f[r][1][(x >> 4) & 0xf] << 4 | en.inv_ext_f[r][0][(x & 0xf)];
+            uint8_t t = mul<uint8_t>(l0[inv_shift_map[r]], y);
+            et.i_tables[r][x] = t;
+            // et.i_tables[r][x] = en.int_f[r][r][1][(t >> 4) & 0xf] << 4 | en.int_f[r][r][0][(t & 0xf)];
         }
     }
 
     for (n = 0; n < 16; n++) {
         memcpy(u32_temp, et.ty_boxes[0][n], 1024);
         for (x = 0; x < 256; x++) {
-            et.ty_boxes[0][n][x] = u32_temp[mul<uint8_t>(NTL::inv(l0[shift_map[n]]), (uint8_t)x)];
+            et.ty_boxes[0][n][x] = u32_temp[mul<uint8_t>(NTL::inv(l0[n]), (uint8_t)x)];
         }
     }
 
@@ -375,7 +427,7 @@ void gen_encryption_table(WBAES_ENCRYPTION_TABLE &et, WBAES_NONLINEAR_ENCODING &
         Generates T-boxes depend on round keys, 
             Tyi-table and complex them. 
     */
-    gen_xor_tables(et.i_xor_tables, et.xor_tables);
+    gen_xor_tables(et.i_xor_tables, et.xor_tables, en);
     gen_t_boxes(t_boxes, roundkeys, en);
     gen_tyi_tables(tyi_table);
     composite_t_tyi(t_boxes, tyi_table, et.ty_boxes, et.last_box);

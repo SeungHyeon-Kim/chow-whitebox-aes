@@ -4,7 +4,7 @@ LDFLAGS = -std=c++11 -Wall -lntl -lpthread
 SRCDIR  = .
 INCLUDEDIRS = .
 
-SOURCES  = aes.cpp gf2_mat.cpp debug.cpp wbaes_tables.cpp wbaes.cpp
+SOURCES  = debug.cpp aes.cpp gf2_mat.cpp wbaes_tables.cpp wbaes.cpp
 SOURCES += main.cpp
 
 OBJECTS = $(SOURCES:.cpp=.o)

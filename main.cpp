@@ -28,8 +28,17 @@ int main(void) {
             pt2[16]{}, ct[16]{};
     memcpy(pt2, pt1, 16);
     
+    puts("Ipnut data: ");
+    dump_bytes(pt1, 16);
+
+    encode_ext_x(en->ext_f, pt2);
+    puts("Encoded Ipnut data: ");
+    dump_bytes(pt2, 16);
+    
     AES32_Encrypt(pt1, u32_round_key, ct);
+    // encode_ext_x(en->ext_f, pt2);
     wbaes_encrypt(*et, pt2);
+
 
     printf("AES32 OUTPUT: \n");
     dump_bytes(ct , 16);
@@ -37,7 +46,7 @@ int main(void) {
     printf("WBAES OUTPUT: \n");
     dump_bytes(pt2, 16);
 
-    AES32_EqDecrypt(pt2, u32_inv_round_key, ct);
+    // AES32_EqDecrypt(pt2, u32_inv_round_key, ct);
 
     delete et;
     delete en;

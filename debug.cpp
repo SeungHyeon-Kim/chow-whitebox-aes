@@ -1,5 +1,9 @@
 #include "debug.h"
 
+void dump_bytes(uint8_t src) {
+    printf("%02x:", src);
+}
+
 void dump_bytes(const uint8_t *src, const size_t len) {
     size_t i;
 
