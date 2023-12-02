@@ -22,8 +22,9 @@ int main(void) {
     AES32_Dec_KeySchedule(u8_aes_key, u32_inv_round_key);
     gen_encryption_table(*et, *en, (uint32_t *)u32_round_key);
 
-    et->write("et.bin");
+    // et->write("et.bin");
     
+    // uint8_t pt1[16] = {0x00, }, 
     uint8_t pt1[16] = {0x6b, 0xc1, 0xbe, 0xe2, 0x2e, 0x40, 0x9f, 0x96, 0xe9, 0x3d, 0x7e, 0x11, 0x73, 0x93, 0x17, 0x2a}, 
             pt2[16]{}, ct[16]{};
     memcpy(pt2, pt1, 16);
@@ -36,8 +37,7 @@ int main(void) {
     dump_bytes(pt2, 16);
     
     AES32_Encrypt(pt1, u32_round_key, ct);
-    // encode_ext_x(en->ext_f, pt2);
-    wbaes_encrypt(*et, pt2);
+    wbaes_encrypt(*et, *en, pt2);
 
 
     printf("AES32 OUTPUT: \n");

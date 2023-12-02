@@ -48,15 +48,21 @@ static void shift_rows(uint8_t *x) {
     }
 }
 
-static void ref_table(const uint8_t (*i_tables)[256], const uint8_t (*i_xor_tables)[16][16], uint8_t *in) {
+static void ia(const uint8_t (*i_tables)[256], const uint8_t (*i_xor_tables)[16][16], const uint8_t (*ext_f)[2][16], uint8_t *in) {
     int i, j;
-    uint8_t temp[16][16] = {{0x00, }, };
+    uint8_t temp[16][16];
 
     for (i = 0; i < 16; i++) {
         temp[i][i] = in[i];
         for (j = 0; j < 16; j++) {
-            temp[i][j] = i_tables[i][temp[i][j]];
+            if (i != j) {
+                temp[i][j] = i_tables[i][ext_f[i][1][0] << 4 | ext_f[i][0][0]];
+            }
+            else {
+                temp[i][j] = i_tables[i][temp[i][j]];
+            }
         }
+        // dump_bytes(temp[i], 16);
     }
 
     for (i = 0; i < 8; i++) {
@@ -123,10 +129,10 @@ static void ref_table(const uint32_t (*tables)[256], const uint8_t (*xor_tables)
     }
 }
 
-void wbaes_encrypt(const WBAES_ENCRYPTION_TABLE &et, uint8_t *pt) {
+void wbaes_encrypt(const WBAES_ENCRYPTION_TABLE &et, const WBAES_NONLINEAR_ENCODING &en, uint8_t *pt) {
     int r;
 
-    ref_table(et.i_tables, et.i_xor_tables, pt);
+    ia(et.i_tables, et.i_xor_tables, en.ext_f, pt);
 
     for (r = 0; r < 9; r++) {
         shift_rows(pt);
