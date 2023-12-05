@@ -110,21 +110,23 @@ static void ref_table(const uint32_t (*tables)[256], const uint8_t (*xor_tables)
         c = tables[i*4+2][in[i*4+2]];
         d = tables[i*4+3][in[i*4+3]];
 
+        // 16 
+
         in[i*4  ] = (
-            (xor_tables[i*24+4 ][xor_tables[i*24   ][(a >> 28) & 0xf][(b >> 28) & 0xf]][xor_tables[i*24+1 ][(c >> 28) & 0xf][(d >> 28) & 0xf]]) << 4 |
-            (xor_tables[i*24+5 ][xor_tables[i*24+2 ][(a >> 24) & 0xf][(b >> 24) & 0xf]][xor_tables[i*24+3 ][(c >> 24) & 0xf][(d >> 24) & 0xf]])
+            (xor_tables[64+(i*8)  ][xor_tables[i*16  ][(a >> 28) & 0xf][(b >> 28) & 0xf]][xor_tables[i*16+8][(c >> 28) & 0xf][(d >> 28) & 0xf]]) << 4 |
+            (xor_tables[64+(i*8)+1][xor_tables[i*16+1][(a >> 24) & 0xf][(b >> 24) & 0xf]][xor_tables[i*16+9][(c >> 24) & 0xf][(d >> 24) & 0xf]])
         );
         in[i*4+1] = (
-            (xor_tables[i*24+10][xor_tables[i*24+6 ][(a >> 20) & 0xf][(b >> 20) & 0xf]][xor_tables[i*24+7 ][(c >> 20) & 0xf][(d >> 20) & 0xf]]) << 4 |
-            (xor_tables[i*24+11][xor_tables[i*24+8 ][(a >> 16) & 0xf][(b >> 16) & 0xf]][xor_tables[i*24+9 ][(c >> 16) & 0xf][(d >> 16) & 0xf]])
+            (xor_tables[64+(i*8)+2][xor_tables[i*16+2][(a >> 20) & 0xf][(b >> 20) & 0xf]][xor_tables[i*16+10][(c >> 20) & 0xf][(d >> 20) & 0xf]]) << 4 |
+            (xor_tables[64+(i*8)+3][xor_tables[i*16+3][(a >> 16) & 0xf][(b >> 16) & 0xf]][xor_tables[i*16+11][(c >> 16) & 0xf][(d >> 16) & 0xf]])
         );
         in[i*4+2] = (
-            (xor_tables[i*24+16][xor_tables[i*24+12][(a >> 12) & 0xf][(b >> 12) & 0xf]][xor_tables[i*24+13][(c >> 12) & 0xf][(d >> 12) & 0xf]]) << 4 |
-            (xor_tables[i*24+17][xor_tables[i*24+14][(a >>  8) & 0xf][(b >>  8) & 0xf]][xor_tables[i*24+15][(c >>  8) & 0xf][(d >>  8) & 0xf]])
+            (xor_tables[64+(i*8)+4][xor_tables[i*16+4][(a >> 12) & 0xf][(b >> 12) & 0xf]][xor_tables[i*16+12][(c >> 12) & 0xf][(d >> 12) & 0xf]]) << 4 |
+            (xor_tables[64+(i*8)+5][xor_tables[i*16+5][(a >>  8) & 0xf][(b >>  8) & 0xf]][xor_tables[i*16+13][(c >>  8) & 0xf][(d >>  8) & 0xf]])
         );
         in[i*4+3] = (
-            (xor_tables[i*24+22][xor_tables[i*24+18][(a >>  4) & 0xf][(b >>  4) & 0xf]][xor_tables[i*24+19][(c >>  4) & 0xf][(d >>  4) & 0xf]]) << 4 |
-            (xor_tables[i*24+23][xor_tables[i*24+20][(a      ) & 0xf][(b      ) & 0xf]][xor_tables[i*24+21][(c      ) & 0xf][(d      ) & 0xf]])
+            (xor_tables[64+(i*8)+6][xor_tables[i*16+6][(a >>  4) & 0xf][(b >>  4) & 0xf]][xor_tables[i*16+14][(c >>  4) & 0xf][(d >>  4) & 0xf]]) << 4 |
+            (xor_tables[64+(i*8)+7][xor_tables[i*16+7][(a      ) & 0xf][(b      ) & 0xf]][xor_tables[i*16+15][(c      ) & 0xf][(d      ) & 0xf]])
         );
     }
 }
@@ -132,14 +134,19 @@ static void ref_table(const uint32_t (*tables)[256], const uint8_t (*xor_tables)
 void wbaes_encrypt(const WBAES_ENCRYPTION_TABLE &et, const WBAES_NONLINEAR_ENCODING &en, uint8_t *pt) {
     int r;
 
-    ia(et.i_tables, et.i_xor_tables, en.ext_f, pt);
+    ia(et.i_tables, et.s_xor_tables, en.ext_f, pt);
+
+    // dump_bytes(pt, 16);
+
 
     for (r = 0; r < 9; r++) {
         shift_rows(pt);
-        ref_table(et.ty_boxes[r]  , et.xor_tables[r], pt);
-        ref_table(et.mbl_tables[r], et.xor_tables[r], pt);
+        ref_table(et.ty_boxes[r]  , et.r1_xor_tables[r], pt);
+        ref_table(et.mbl_tables[r], et.r2_xor_tables[r], pt);
     }
     shift_rows(pt);
+
+    dump_bytes(pt, 16);
 
     pt[0 ] = et.last_box[0 ][pt[0 ]];
     pt[1 ] = et.last_box[1 ][pt[1 ]];
