@@ -29,9 +29,6 @@ long get_ms() {
 }
 
 void aes() {
-    int i;
-    double begin;
-
     puts("==================== AES-128 ====================");
     puts("[Ipnut]"); dump_bytes(pt1, 16); puts("");
 
@@ -44,17 +41,17 @@ void aes() {
     puts("[Decrypted]"); dump_bytes(pt1, 16);
     puts("=================================================");
 
-    begin = get_ms();
+    #if DEBUG_OUT == 0
+    int i;
+    double begin = get_ms();
     for (i = 0; i < EPOCH; i++) {
         AES32_Encrypt(pt1, u32_round_key, ct);
     }
     printf("elapsed : (1 avg) %.4fms\n", (get_ms() - begin) / EPOCH);
+    #endif
 }
 
 void wbaes() {
-    int i;
-    double begin;
-
     WBAES_ENCRYPTION_TABLE *et = new WBAES_ENCRYPTION_TABLE();
     WBAES_EXT_ENCODING     *ee = new WBAES_EXT_ENCODING();
     WBAES_INT_ENCODING     *ie = new WBAES_INT_ENCODING();
@@ -82,11 +79,14 @@ void wbaes() {
     puts("[Decrypted]"); dump_bytes(ct, 16);
     puts("=================================================");
 
-    begin = get_ms();
+    #if DEBUG_OUT == 0
+    int i;
+    double begin = get_ms();
     for (i = 0; i < EPOCH; i++) {
         wbaes_encrypt(*et, pt2);
     }
     printf("elapsed : (1 avg) %.4fms\n", (get_ms() - begin) / EPOCH);
+    #endif
 
     delete et;
     delete ee;
@@ -104,7 +104,7 @@ int main(int argc, char *argv[]) {
 
     if (argc == 2) {
         if (std::strcmp(argv[1], "aes") == 0) {
-        aes();
+            aes();
         }
         else if (std::strcmp(argv[1], "wbaes") == 0) {
             wbaes();

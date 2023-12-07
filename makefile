@@ -1,5 +1,5 @@
 CC = g++
-FLAGS = -std=c++11 -O2 -Wall
+FLAGS = -std=c++11 -O2 -Wall -DDEBUG_OUT=1
 LDFLAGS = -std=c++11 -Wall -lntl -lpthread
 SRCDIR  = .
 INCLUDEDIRS = .
