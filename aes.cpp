@@ -759,14 +759,22 @@ void AES32_Encrypt(byte pt[16], u32 rk[11][4], byte ct[16]) {
 	u32 state[4], tmp[4];
 
 	byte2state(pt, state);
+
 	//AddRoundKey[0]
 	for (int k = 0; k < 4; k++) {
 		state[k] ^= rk[0][k];
 	}
 
+    #if DEBUG_OUT
+    puts("Round ----------------------------------------");
+    printf("[00] "); dump_bytes((uint8_t *)state, 16);
+    #endif
+
 	for (int r = 1; r < 10; r++) {
 		AES32_round(state, rk[r]);
-        // AES32_print_state(state);
+        #if DEBUG_OUT
+        printf("[%02d] ", r); dump_bytes((uint8_t *)state, 16);
+        #endif
 	}
 	
 	//마지막 라운드(10R)
@@ -779,6 +787,11 @@ void AES32_Encrypt(byte pt[16], u32 rk[11][4], byte ct[16]) {
 	tmp[3] = (Te4[state[3] >> 24] & 0xff000000) ^ (Te4[(state[0] >> 16) & 0xff] & 0x00ff0000)
 		    ^ (Te4[(state[1] >> 8) & 0xff] & 0x0000ff00) ^ (Te4[state[2] & 0xff] & 0x000000ff) ^ rk[10][3];
 	state2byte(tmp, ct);
+
+    #if DEBUG_OUT
+    printf("[10] "); dump_bytes(ct, 16);
+    puts("----------------------------------------------");
+    #endif
 }
 
 //=====

@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 
+#include "debug.h"
+
 typedef unsigned char byte;
 typedef unsigned char   u8;
 typedef unsigned int   u32;

@@ -9,7 +9,6 @@
 #include "debug.h"
 
 extern uint8_t     shift_map[16];
-extern uint8_t inv_shift_map[16];
 
 /*
     A Tutorial on Whitebox AES
@@ -26,17 +25,6 @@ extern uint8_t inv_shift_map[16];
         chipertext = state
 */
 
-static void inv_shift_rows(uint8_t *x) {
-    int i;
-    uint8_t temp[16];
-
-    memcpy(temp, x, 16);
-
-    for (i = 0; i < 16; i++) {
-        x[i] = temp[inv_shift_map[i]];
-    }
-}
-
 static void shift_rows(uint8_t *x) {
     int i;
     uint8_t temp[16];
@@ -48,57 +36,55 @@ static void shift_rows(uint8_t *x) {
     }
 }
 
-static void ia(const uint8_t (*i_tables)[256], const uint8_t (*i_xor_tables)[16][16], const uint8_t (*ext_f)[2][16], uint8_t *in) {
-    int i, j;
-    uint8_t temp[16][16];
+// static void ia(const uint8_t (*tables)[256], const uint8_t (*i_xor_tables)[16][16], const uint8_t (*ext)[2][16], uint8_t *in) {
+//     int i, j;
+//     uint8_t temp[16][16];
 
-    for (i = 0; i < 16; i++) {
-        temp[i][i] = in[i];
-        for (j = 0; j < 16; j++) {
-            if (i != j) {
-                temp[i][j] = i_tables[i][ext_f[i][1][0] << 4 | ext_f[i][0][0]];
-            }
-            else {
-                temp[i][j] = i_tables[i][temp[i][j]];
-            }
-        }
-        // dump_bytes(temp[i], 16);
-    }
+//     for (i = 0; i < 16; i++) {
+//         temp[i][i] = in[i];
+//         for (j = 0; j < 16; j++) {
+//             if (i != j) {
+//                 temp[i][j] = tables[i][ext[i][1][0] << 4 | ext[i][0][0]];
+//             }
+//             else {
+//                 temp[i][j] = tables[i][temp[i][j]];
+//             }
+//         }
+//     }
 
-    for (i = 0; i < 8; i++) {
-        for (j = 0; j < 16; j++) {
-            temp[i][j] = (
-                i_xor_tables[(i<<5)+(j<<1)  ][(temp[(i<<1)][j] >> 4) & 0xf][(temp[(i<<1)+1][j] >> 4) & 0xf] << 4 | 
-                i_xor_tables[(i<<5)+(j<<1)+1][(temp[(i<<1)][j])      & 0xf][(temp[(i<<1)+1][j])      & 0xf]      
-            );
-        }
-    }
+//     for (i = 0; i < 8; i++) {
+//         for (j = 0; j < 16; j++) {
+//             temp[i][j] = (
+//                 i_xor_tables[(i<<5)+(j<<1)  ][(temp[(i<<1)][j] >> 4) & 0xf][(temp[(i<<1)+1][j] >> 4) & 0xf] << 4 | 
+//                 i_xor_tables[(i<<5)+(j<<1)+1][(temp[(i<<1)][j])      & 0xf][(temp[(i<<1)+1][j])      & 0xf]      
+//             );
+//         }
+//     }
 
-    for (i = 8; i < 12; i++) {
-        for (j = 0; j < 16; j++) {
-            temp[i][j] = (
-                i_xor_tables[(i<<5)+(j<<1)  ][(temp[(i-8)*2][j] >> 4) & 0xf][(temp[((i-8)*2)+1][j] >> 4) & 0xf] << 4 |
-                i_xor_tables[(i<<5)+(j<<1)+1][(temp[(i-8)*2][j])      & 0xf][(temp[((i-8)*2)+1][j])      & 0xf]      
-            );
-        }
-    }
+//     for (i = 8; i < 12; i++) {
+//         for (j = 0; j < 16; j++) {
+//             temp[i][j] = (
+//                 i_xor_tables[(i<<5)+(j<<1)  ][(temp[(i-8)*2][j] >> 4) & 0xf][(temp[((i-8)*2)+1][j] >> 4) & 0xf] << 4 |
+//                 i_xor_tables[(i<<5)+(j<<1)+1][(temp[(i-8)*2][j])      & 0xf][(temp[((i-8)*2)+1][j])      & 0xf]      
+//             );
+//         }
+//     }
 
-    for (j = 0; j < 16; j++) {
-        temp[12][j] = (
-            i_xor_tables[384+(j<<1)  ][(temp[8][j] >> 4) & 0xf][(temp[9][j] >> 4) & 0xf] << 4 |
-            i_xor_tables[384+(j<<1)+1][(temp[8][j])      & 0xf][(temp[9][j])      & 0xf]      
-        );
-        temp[13][j] = (
-            i_xor_tables[416+(j<<1)  ][(temp[10][j] >> 4) & 0xf][(temp[11][j] >> 4) & 0xf] << 4 |
-            i_xor_tables[416+(j<<1)+1][(temp[10][j])      & 0xf][(temp[11][j])      & 0xf]      
-        );
-        in[j] = (
-            i_xor_tables[448+(j<<1)  ][(temp[12][j] >> 4) & 0xf][(temp[13][j] >> 4) & 0xf] << 4 |
-            i_xor_tables[448+(j<<1)+1][(temp[12][j])      & 0xf][(temp[13][j])      & 0xf]      
-        );
-    }
-    
-}
+//     for (j = 0; j < 16; j++) {
+//         temp[12][j] = (
+//             i_xor_tables[384+(j<<1)  ][(temp[8][j] >> 4) & 0xf][(temp[9][j] >> 4) & 0xf] << 4 |
+//             i_xor_tables[384+(j<<1)+1][(temp[8][j])      & 0xf][(temp[9][j])      & 0xf]      
+//         );
+//         temp[13][j] = (
+//             i_xor_tables[416+(j<<1)  ][(temp[10][j] >> 4) & 0xf][(temp[11][j] >> 4) & 0xf] << 4 |
+//             i_xor_tables[416+(j<<1)+1][(temp[10][j])      & 0xf][(temp[11][j])      & 0xf]      
+//         );
+//         in[j] = (
+//             i_xor_tables[448+(j<<1)  ][(temp[12][j] >> 4) & 0xf][(temp[13][j] >> 4) & 0xf] << 4 |
+//             i_xor_tables[448+(j<<1)+1][(temp[12][j])      & 0xf][(temp[13][j])      & 0xf]      
+//         );
+//     }
+// }
 
 static void ref_table(const uint32_t (*tables)[256], const uint8_t (*xor_tables)[16][16], uint8_t *in) {
     int i;
@@ -109,8 +95,6 @@ static void ref_table(const uint32_t (*tables)[256], const uint8_t (*xor_tables)
         b = tables[i*4+1][in[i*4+1]];
         c = tables[i*4+2][in[i*4+2]];
         d = tables[i*4+3][in[i*4+3]];
-
-        // 16 
 
         in[i*4  ] = (
             (xor_tables[64+(i*8)  ][xor_tables[i*16  ][(a >> 28) & 0xf][(b >> 28) & 0xf]][xor_tables[i*16+8][(c >> 28) & 0xf][(d >> 28) & 0xf]]) << 4 |
@@ -131,22 +115,26 @@ static void ref_table(const uint32_t (*tables)[256], const uint8_t (*xor_tables)
     }
 }
 
-void wbaes_encrypt(const WBAES_ENCRYPTION_TABLE &et, const WBAES_NONLINEAR_ENCODING &en, uint8_t *pt) {
+void wbaes_encrypt(const WBAES_ENCRYPTION_TABLE &et, uint8_t *pt) {
     int r;
 
-    ia(et.i_tables, et.s_xor_tables, en.ext_f, pt);
-
-    // dump_bytes(pt, 16);
-
+    // ia(et.i_tables, et.s_xor_tables, ee.ext_f, pt);
+    #if DEBUG_OUT
+    puts("Round ----------------------------------------");
+    #endif
 
     for (r = 0; r < 9; r++) {
         shift_rows(pt);
         ref_table(et.ty_boxes[r]  , et.r1_xor_tables[r], pt);
         ref_table(et.mbl_tables[r], et.r2_xor_tables[r], pt);
+
+        #if DEBUG_OUT
+        printf("[%02d] ", r); dump_bytes(pt, 16);
+        #endif
     }
     shift_rows(pt);
 
-    dump_bytes(pt, 16);
+    // ia(et.last_box, et.e_xor_tables, ee.ext_g, pt);
 
     pt[0 ] = et.last_box[0 ][pt[0 ]];
     pt[1 ] = et.last_box[1 ][pt[1 ]];
@@ -164,4 +152,9 @@ void wbaes_encrypt(const WBAES_ENCRYPTION_TABLE &et, const WBAES_NONLINEAR_ENCOD
     pt[13] = et.last_box[13][pt[13]];
     pt[14] = et.last_box[14][pt[14]];
     pt[15] = et.last_box[15][pt[15]];
+
+    #if DEBUG_OUT
+    printf("[10] "); dump_bytes(pt, 16);
+    puts("----------------------------------------------");
+    #endif
 }
