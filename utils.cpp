@@ -1,6 +1,10 @@
-#include "debug.h"
+#include "utils.h"
 
-void dump_bytes(uint8_t src) {
+
+/*
+    Dump memory
+*/
+void dump_bytes(const uint8_t src) {
     printf("%02x:", src);
 }
 

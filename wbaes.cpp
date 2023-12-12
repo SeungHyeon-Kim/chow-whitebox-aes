@@ -2,13 +2,10 @@
     Implementation of Chow's Whitebox AES
         - Encrypt on the whiteboxing algorithm
 */
-
-#include <iostream>
-
 #include "wbaes.h"
-#include "debug.h"
 
 extern uint8_t     shift_map[16];
+
 
 /*
     A Tutorial on Whitebox AES

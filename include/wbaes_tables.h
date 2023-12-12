@@ -1,10 +1,12 @@
 #ifndef WBAES_TABLES_H
 #define WBAES_TABLES_H
 
+#include <iostream>
 #include <fstream>
+#include <ostream>
 
 #include "aes.h"
-#include "debug.h"
+#include "utils.h"
 
 /*
     Whitebox AES Tables
@@ -45,9 +47,17 @@ struct WBAES_ENCRYPTION_TABLE {
      - External
 */
 struct WBAES_EXT_ENCODING {
+    /*
+        In
+         Data -> Ext(Data) -> Encryption
+    */
     uint8_t     ext_f[16][2][16];
     uint8_t inv_ext_f[16][2][16];
 
+    /*
+        Out
+         Encryption -> Ext(E(Data)) -> E(Data)
+    */
     uint8_t     ext_g[16][2][16];
     uint8_t inv_ext_g[16][2][16];
 };
@@ -98,9 +108,31 @@ struct WBAES_INT_ENCODING {
     // uint8_t   inv_int_outo[15][32][16];
 };
 
+/**
+ * @brief
+ *  Applies external random encoding before or after performing white box encryption.
+ * @param f     External Encoding Table
+ * @param x     Input
+*/
 void encode_ext_x(uint8_t (*f)[2][16], uint8_t *x);
+
+/**
+ * @brief
+ *  Removes external random encoding
+ * @param inv_f     External Encoding Table
+ * @param x         Input
+*/
 void decode_ext_x(uint8_t (*inv_f)[2][16], uint8_t *x);
 
-void gen_encryption_table(WBAES_ENCRYPTION_TABLE &et, WBAES_EXT_ENCODING &ee, WBAES_INT_ENCODING &ie, uint32_t *roundkeys);
+
+/**
+ * @brief
+ *  Generates A Whitebox Encrypion Table
+ * @param et        Context of WBAES Encryption Table
+ * @param ee        Context of External Encoding Table
+ * @param ie        Context of Internal Encoding Table
+ * @param roundkeys AES-128 Round keys for encryption
+*/
+void wbaes_gen_encryption_table(WBAES_ENCRYPTION_TABLE &et, WBAES_EXT_ENCODING &ee, WBAES_INT_ENCODING &ie, uint32_t *roundkeys);
 
 #endif /* WBAES_TABLES_H */

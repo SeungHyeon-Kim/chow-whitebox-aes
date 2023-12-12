@@ -9,12 +9,13 @@
 #include "aes.h"
 #include "wbaes.h"
 #include "wbaes_tables.h"
-#include "debug.h"
+#include "utils.h"
 
 #define EPOCH       10000
 
+
 /*
-    Common Params
+    Params
 */
 uint8_t  pt1[16] = {0x6b, 0xc1, 0xbe, 0xe2, 0x2e, 0x40, 0x9f, 0x96, 0xe9, 0x3d, 0x7e, 0x11, 0x73, 0x93, 0x17, 0x2a}, 
          pt2[16] = {0x6b, 0xc1, 0xbe, 0xe2, 0x2e, 0x40, 0x9f, 0x96, 0xe9, 0x3d, 0x7e, 0x11, 0x73, 0x93, 0x17, 0x2a}, 
@@ -32,11 +33,11 @@ void aes() {
     puts("==================== AES-128 ====================");
     puts("[Ipnut]"); dump_bytes(pt1, 16); puts("");
 
-    AES32_Encrypt(pt1, u32_round_key, ct);
+    aes32_encrypt(pt1, u32_round_key, ct);
 
     puts("[Output]"); dump_bytes(ct, 16); puts("");
 
-    AES32_EqDecrypt(ct, u32_inv_round_key, pt1);
+    aes32_decrypt(ct, u32_inv_round_key, pt1);
 
     puts("[Decrypted]"); dump_bytes(pt1, 16);
     puts("=================================================");
@@ -45,9 +46,9 @@ void aes() {
     int i;
     double begin = get_ms();
     for (i = 0; i < EPOCH; i++) {
-        AES32_Encrypt(pt1, u32_round_key, ct);
+        aes32_encrypt(pt1, u32_round_key, ct);
     }
-    printf("elapsed : (1 avg) %.4fms\n", (get_ms() - begin) / EPOCH);
+    printf("elapsed : (1 avg) %.4fms\n\n", (get_ms() - begin) / EPOCH);
     #endif
 }
 
@@ -56,7 +57,7 @@ void wbaes() {
     WBAES_EXT_ENCODING     *ee = new WBAES_EXT_ENCODING();
     WBAES_INT_ENCODING     *ie = new WBAES_INT_ENCODING();
 
-    gen_encryption_table(*et, *ee, *ie, (uint32_t *)u32_round_key);
+    wbaes_gen_encryption_table(*et, *ee, *ie, (uint32_t *)u32_round_key);
     // et->write("et.bin");
 
     puts("===================== WBAES =====================");
@@ -74,7 +75,7 @@ void wbaes() {
 
     puts("[ExtB(Output)]"); dump_bytes(pt2, 16); puts("");
 
-    AES32_EqDecrypt(pt2, u32_inv_round_key, ct);
+    aes32_decrypt(pt2, u32_inv_round_key, ct);
 
     puts("[Decrypted]"); dump_bytes(ct, 16);
     puts("=================================================");
@@ -85,7 +86,7 @@ void wbaes() {
     for (i = 0; i < EPOCH; i++) {
         wbaes_encrypt(*et, pt2);
     }
-    printf("elapsed : (1 avg) %.4fms\n", (get_ms() - begin) / EPOCH);
+    printf("elapsed : (1 avg) %.4fms\n\n", (get_ms() - begin) / EPOCH);
     #endif
 
     delete et;
@@ -94,8 +95,8 @@ void wbaes() {
 }
 
 int main(int argc, char *argv[]) {
-    AES32_Enc_KeySchedule(u8_aes_key, u32_round_key);
-    AES32_Dec_KeySchedule(u8_aes_key, u32_inv_round_key);
+    aes32_enc_keyschedule(u8_aes_key, u32_round_key);
+    aes32_dec_keyschedule(u8_aes_key, u32_inv_round_key);
 
     if (argc > 3) {
         printf("retry ./main or ./main aes or ./main wbaes");

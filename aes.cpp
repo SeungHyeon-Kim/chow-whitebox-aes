@@ -1,11 +1,13 @@
 /*
     Implementation of AES-128 32bits
 */
+#include <iostream>
 
 #include "aes.h"
+#include "utils.h"
 
 /*
-    Constants
+    Extern Constants
 */
 extern constexpr u32 Te0[256] = {
     0xc66363a5, 0xf87c7c84, 0xee777799, 0xf67b7b8d,
@@ -695,8 +697,6 @@ extern constexpr  u8 inv_shift_map[16] = {
     0, 13, 10, 7, 4, 1, 14, 11, 8, 5, 2, 15, 12, 9, 6, 3
 };
 
-//=====
-// 바이트 b[16] --> 워드 state[4]
 inline void byte2state(byte b[16], u32 state[4]) {
 	state[0] = GETU32(b);
 	state[1] = GETU32(b + 4);
@@ -704,8 +704,6 @@ inline void byte2state(byte b[16], u32 state[4]) {
 	state[3] = GETU32(b + 12);
 }
 
-//=====
-// 워드 state[4] --> 바이트 b[16]
 inline void state2byte(u32 state[4], byte b[16]) {
 	PUTU32(b, state[0]);
 	PUTU32(b + 4, state[1]);
@@ -713,9 +711,6 @@ inline void state2byte(u32 state[4], byte b[16]) {
 	PUTU32(b + 12, state[3]);
 }
 
-//=====
-// 32비트 암호/복호화 중간값(state) 출력
-#include <iostream>
 void AES32_print_state(u32 state[4]) {
 	for (int k = 0; k < 4; k++) {
 		printf("%08x ", state[k]);
@@ -723,9 +718,7 @@ void AES32_print_state(u32 state[4]) {
 	printf("\n");
 }
 
-//=====
-// AES32 암호화 라운드함수
-void AES32_round(u32 state[4], u32 rk[4]) {
+void aes32_round(u32 state[4], u32 rk[4]) {
 	u32 tmp[4];
 
 	tmp[0] = Te0[state[0] >> 24] ^ Te1[(state[1] >> 16) & 0xff] ^ Te2[(state[2] >> 8) & 0xff] ^ Te3[state[3] & 0xff] ^ rk[0];
@@ -738,9 +731,7 @@ void AES32_round(u32 state[4], u32 rk[4]) {
 	}
 }
 
-//=====
-// AES32 복호화 라운드함수 (1-9 라운드키는 암호화 라운드키에 InvMixColumn() 적용한 것)
-void AES32_EqInv_round(u32 state[4], u32 rk[4]) {
+void aes32_inv_round(u32 state[4], u32 rk[4]) {
 	u32 tmp[4];
 
 	tmp[0] = Td0[state[0] >> 24] ^ Td1[(state[3] >> 16) & 0xff] ^ Td2[(state[2] >> 8) & 0xff] ^ Td3[state[1] & 0xff] ^ rk[0];
@@ -753,14 +744,12 @@ void AES32_EqInv_round(u32 state[4], u32 rk[4]) {
 	}
 }
 
-//=====
-// AES32 암호화
-void AES32_Encrypt(byte pt[16], u32 rk[11][4], byte ct[16]) {
+void aes32_encrypt(byte pt[16], u32 rk[11][4], byte ct[16]) {
 	u32 state[4], tmp[4];
 
 	byte2state(pt, state);
 
-	//AddRoundKey[0]
+	// AddRoundKey[0]
 	for (int k = 0; k < 4; k++) {
 		state[k] ^= rk[0][k];
 	}
@@ -771,13 +760,12 @@ void AES32_Encrypt(byte pt[16], u32 rk[11][4], byte ct[16]) {
     #endif
 
 	for (int r = 1; r < 10; r++) {
-		AES32_round(state, rk[r]);
+		aes32_round(state, rk[r]);
         #if DEBUG_OUT
         printf("[%02d] ", r); dump_bytes((uint8_t *)state, 16);
         #endif
 	}
 	
-	//마지막 라운드(10R)
 	tmp[0] = (Te4[state[0] >> 24] & 0xff000000) ^ (Te4[(state[1] >> 16) & 0xff] & 0x00ff0000)
 		    ^ (Te4[(state[2] >> 8) & 0xff] & 0x0000ff00) ^ (Te4[state[3] & 0xff] & 0x000000ff) ^ rk[10][0];
 	tmp[1] = (Te4[state[1] >> 24] & 0xff000000) ^ (Te4[(state[2] >> 16) & 0xff] & 0x00ff0000)
@@ -794,19 +782,18 @@ void AES32_Encrypt(byte pt[16], u32 rk[11][4], byte ct[16]) {
     #endif
 }
 
-//=====
-// AES32 복호화
-void AES32_EqDecrypt(byte ct[16], u32 rk[11][4], byte pt[16]) {
+void aes32_decrypt(byte ct[16], u32 rk[11][4], byte pt[16]) {
 	u32 state[4], tmp[4];
 
 	byte2state(ct, state);
-	//AddRoundKey[10]
+	
+    // AddRoundKey[10]
 	for (int k = 0; k < 4; k++) {
 		state[k] ^= rk[10][k];
 	}
 
 	for (int r = 9; r > 0; r--) {
-		AES32_EqInv_round(state, rk[r]);
+		aes32_inv_round(state, rk[r]);
 	}
 	tmp[0] = (Td4[state[0] >> 24] & 0xff000000) ^ (Td4[(state[3] >> 16) & 0xff] & 0x00ff0000)
 		^ (Td4[(state[2] >> 8) & 0xff] & 0x0000ff00) ^ (Td4[state[1] & 0xff] & 0x000000ff) ^ rk[0][0];
@@ -819,22 +806,15 @@ void AES32_EqDecrypt(byte ct[16], u32 rk[11][4], byte pt[16]) {
 	state2byte(tmp, pt);
 }
 
-
-//=====
-// 키스케줄용: (x0, x1, x2, x3) --> (x1, x2, x3, x0)
-u32 RotWord(u32 w32) {
+static u32 RotWord(u32 w32) {
 	return (w32 << 8) | (w32 >> 24);
 }
 
-//=====
-// 키스케줄용: (x0, x1, x2, x3) --> (S[x0], S[x1], S[x2], S[x3])
-u32 SubWord(u32 w32) {
+static  u32 SubWord(u32 w32) {
 	return (Sbox[w32 >> 24] << 24) ^ (Sbox[(w32 >> 16) & 0xff] << 16) ^ (Sbox[(w32 >> 8) & 0xff] << 8) ^ Sbox[w32 & 0xff];
 }
 
-//=====
-// AES32 암호화 키스케줄
-void AES32_Enc_KeySchedule(byte k[16], u32 rk[11][4]) {
+void aes32_enc_keyschedule(byte k[16], u32 rk[11][4]) {
 	u32 tmp;
 	int rcon_counter;
 
@@ -855,21 +835,11 @@ void AES32_Enc_KeySchedule(byte k[16], u32 rk[11][4]) {
 	}
 }
 
-//=====
-// AES32 복호화 키스케줄
-void AES32_Dec_KeySchedule(byte k[16], u32 rk[11][4]) {
+void aes32_dec_keyschedule(byte k[16], u32 rk[11][4]) {
 
-	AES32_Enc_KeySchedule(k, rk);
+	aes32_enc_keyschedule(k, rk);
 
 	for (int i = 1; i < 10; i++) {
-		//1라운드 ~ 9라운드에 InvMixCol을 적용한다 !!!!!
-		// Te4[x] = (S[x], S[x], S[x], S[x])
-		// rk[i][0] = (x0, x1, x2, x3), rk[i][1] = (x4, x5, x6, x7), ...
-		// Te4[(rk[i][0] >> 24)] = Te4[x0] = (S[x0], S[x0], S[x0], S[x0]) 
-		// Te4[(rk[i][0] >> 24)] & 0xff = Te4[x0] & 0xff = S[x0] 
-		// Td0[Te4[(rk[i][0] >> 24)] & 0xff] = Td0[S[x0]]
-		// ... Td0[],... , Td3[] ==> InvMixCol[ InvSbox[x] ]
-		// 원리를 이해하세요! (그림 또는 수식으로) 
 		rk[i][0] = Td0[Te4[(rk[i][0] >> 24)] & 0xff] ^ Td1[Te4[(rk[i][0] >> 16) & 0xff] & 0xff]
 			^ Td2[Te4[(rk[i][0] >> 8) & 0xff] & 0xff] ^ Td3[Te4[(rk[i][0]) & 0xff] & 0xff];
 		rk[i][1] = Td0[Te4[(rk[i][1] >> 24)] & 0xff] ^ Td1[Te4[(rk[i][1] >> 16) & 0xff] & 0xff]
@@ -881,12 +851,10 @@ void AES32_Dec_KeySchedule(byte k[16], u32 rk[11][4]) {
 	}
 }
 
-//=====
-// AES8 키스케줄 (AES32 키스케줄 이용, 8비트에서는 암호화/복호화 동일하게 사용함)
-void AES8_KeySchedule(byte k[16], byte rk[11][16]) {
+void aes8_keyschedule(byte k[16], byte rk[11][16]) {
 	u32 rk32[11][4];
 
-	AES32_Enc_KeySchedule(k, rk32);
+	aes32_enc_keyschedule(k, rk32);
 	for (int i = 0; i < 11; i++) {
 		state2byte(rk32[i], rk[i]);
 	}

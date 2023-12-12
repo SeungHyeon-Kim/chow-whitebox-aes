@@ -4,22 +4,78 @@
 */
 
 #include <iostream>
-#include <fstream>
 #include <cstdlib>
-#include <ctime>
+#include <NTL/mat_GF2.h>
 
+#include "gf.h"
 #include "wbaes_tables.h"
-#include "gf2_mat.h"
 
 extern uint8_t         Sbox[256];
 extern uint8_t     shift_map[16];
 extern uint8_t inv_shift_map[16];
 
+/*
+    Operations on GF(2) using NTL
+*/
+static NTL::mat_GF2 gen_gf2_rand_matrix(const int dim) {
+    int i, j;
+    NTL::mat_GF2 ret(NTL::INIT_SIZE, dim, dim);
+    
+    for (i = 0; i < dim; i++) {
+        for (j = 0; j < dim; j++) {
+            ret[i][j] = NTL::random_GF2();
+        }
+    }
+
+    return ret;
+}
+
+static NTL::mat_GF2 gen_gf2_rand_invertible_matrix(const int dim) {
+    for (;;) {
+        NTL::mat_GF2 ret = gen_gf2_rand_matrix(dim);
+        if (NTL::determinant(ret) != 0) {
+            return ret;
+        }
+    }
+}
+
+template <typename T>
+static inline NTL::vec_GF2 scalar2vec(const T in) {
+    int i, bit_len = sizeof(T) * 8;
+    NTL::vec_GF2 ret;
+
+    ret.SetLength(bit_len);
+    
+    for (i = 0; i < bit_len; i++) {
+        ret[bit_len - 1 - i] = ((in >> i) & 0x1);
+    }
+    
+    return ret;
+}
+
+template <typename T>
+static inline T vec2scalar(const NTL::vec_GF2& in) {
+  int i, bit_len = sizeof(T) * 8;
+  T ret = 0;
+  
+  for (i = 0; i < bit_len; i++) {
+    ret = (ret << 1) | NTL::rep(in[i]);
+  }
+
+  return ret;
+}
+
+template <typename T>
+static inline T mul(const NTL::mat_GF2& mat, const T x) {
+  return vec2scalar<T>(mat * scalar2vec<T>(x));
+}
+
+/*
+    Generates random encoding
+*/
 static void knuth_shuffle(uint8_t *x) {
     int i, j;
     uint8_t temp;
-
-    // std::srand(std::time(nullptr));
 
     for (i = 0; i < 16; i++) {
         j = std::rand() % 16;        // Replace this with secure pseudo-random number generator
@@ -52,6 +108,22 @@ static void gen_rand(uint8_t *x, uint8_t *inv_x) {
     }
 }
 
+void encode_ext_x(uint8_t (*f)[2][16], uint8_t *x) {
+    int i;
+
+    for (i = 0; i < 16; i++) {
+        x[i] = f[i][1][(x[i] >> 4) & 0xf] << 4 | f[i][0][x[i] & 0xf];
+    }
+}
+
+void decode_ext_x(uint8_t (*inv_f)[2][16], uint8_t *x) {
+    int i;
+
+    for (i = 0; i < 16; i++) {
+        x[i] = inv_f[i][1][(x[i] >> 4) & 0xf] << 4 | inv_f[i][0][x[i] & 0xf];
+    }
+}
+
 static void add_rk(uint8_t *x, uint32_t *rk) {
     int i;
     uint8_t u8_rk[16];
@@ -69,23 +141,7 @@ static void add_rk(uint8_t *x, uint32_t *rk) {
     }
 }
 
-void encode_ext_x(uint8_t (*f)[2][16], uint8_t *x) {
-    int i;
-
-    for (i = 0; i < 16; i++) {
-        x[i] = f[i][1][(x[i] >> 4) & 0xf] << 4 | f[i][0][x[i] & 0xf];
-    }
-}
-
-void decode_ext_x(uint8_t (*inv_f)[2][16], uint8_t *x) {
-    int i;
-
-    for (i = 0; i < 16; i++) {
-        x[i] = inv_f[i][1][(x[i] >> 4) & 0xf] << 4 | inv_f[i][0][x[i] & 0xf];
-    }
-}
-
-void gen_nonlinear_encoding(WBAES_EXT_ENCODING &ee, WBAES_INT_ENCODING &ie) {
+static void gen_nonlinear_encoding(WBAES_EXT_ENCODING &ee, WBAES_INT_ENCODING &ie) {
     int i, j, k;
 
     /*
@@ -240,7 +296,7 @@ void gen_nonlinear_encoding(WBAES_EXT_ENCODING &ee, WBAES_INT_ENCODING &ie) {
     // }
 }
 
-void gen_xor_tables(uint8_t (*r1_xor_tables)[96][16][16], uint8_t (*r2_xor_tables)[96][16][16], const WBAES_EXT_ENCODING &ee, const WBAES_INT_ENCODING &ie) {
+static void gen_xor_tables(uint8_t (*r1_xor_tables)[96][16][16], uint8_t (*r2_xor_tables)[96][16][16], const WBAES_EXT_ENCODING &ee, const WBAES_INT_ENCODING &ie) {
     /*
         xor_tables
           |01 02| |03 04| |05 06| |07 08| |09 10| |11 12| |13 14| |15 16|
@@ -312,7 +368,7 @@ void gen_xor_tables(uint8_t (*r1_xor_tables)[96][16][16], uint8_t (*r2_xor_table
     // }
 }
 
-void gen_t_boxes(uint8_t (*t_boxes)[16][256], uint32_t *roundkeys) {
+static void gen_t_boxes(uint8_t (*t_boxes)[16][256], uint32_t *roundkeys) {
     int r, x, n;
     uint8_t temp[16];
 
@@ -341,18 +397,18 @@ void gen_t_boxes(uint8_t (*t_boxes)[16][256], uint32_t *roundkeys) {
     }
 }
 
-void gen_tyi_tables(uint32_t (*tyi_tables)[256]) {
+static void gen_tyi_tables(uint32_t (*tyi_tables)[256]) {
     int x;
 
     for (x = 0; x < 256; x++) {
-        tyi_tables[0][x] = (GF_mul(2, x) << 24) |           (x  << 16) |           (x  << 8) | GF_mul(3, x);
-        tyi_tables[1][x] = (GF_mul(3, x) << 24) | (GF_mul(2, x) << 16) |           (x  << 8) |          (x);
-        tyi_tables[2][x] =           (x  << 24) | (GF_mul(3, x) << 16) | (GF_mul(2, x) << 8) |          (x);
-        tyi_tables[3][x] =           (x  << 24) |           (x  << 16) | (GF_mul(3, x) << 8) | GF_mul(2, x);
+        tyi_tables[0][x] = (gf_mul(2, x) << 24) |           (x  << 16) |           (x  << 8) | gf_mul(3, x);
+        tyi_tables[1][x] = (gf_mul(3, x) << 24) | (gf_mul(2, x) << 16) |           (x  << 8) |          (x);
+        tyi_tables[2][x] =           (x  << 24) | (gf_mul(3, x) << 16) | (gf_mul(2, x) << 8) |          (x);
+        tyi_tables[3][x] =           (x  << 24) |           (x  << 16) | (gf_mul(3, x) << 8) | gf_mul(2, x);
     }
 }
 
-void composite_t_tyi(uint8_t (*t_boxes)[16][256], uint32_t (*tyi_tables)[256], uint32_t (*ty_boxes)[16][256], uint8_t (*last_box)[256]) {
+static void composite_t_tyi(uint8_t (*t_boxes)[16][256], uint32_t (*tyi_tables)[256], uint32_t (*ty_boxes)[16][256], uint8_t (*last_box)[256]) {
     int r, n, x;
 
     /* Round 1-9 */
@@ -368,7 +424,7 @@ void composite_t_tyi(uint8_t (*t_boxes)[16][256], uint32_t (*tyi_tables)[256], u
     memcpy(last_box, t_boxes[9], 16 * 256);
 }
 
-void apply_encoding(WBAES_ENCRYPTION_TABLE &et, WBAES_EXT_ENCODING &ee, WBAES_INT_ENCODING &ie) {
+static void apply_encoding(WBAES_ENCRYPTION_TABLE &et, WBAES_EXT_ENCODING &ee, WBAES_INT_ENCODING &ie) {
     uint8_t   u8_temp[256];
     uint32_t u32_temp[256];
     NTL::mat_GF2 mb[9][4], l[10][16], l0[16], cl0;
@@ -512,17 +568,21 @@ void apply_encoding(WBAES_ENCRYPTION_TABLE &et, WBAES_EXT_ENCODING &ee, WBAES_IN
     }
 }
 
-void gen_encryption_table(WBAES_ENCRYPTION_TABLE &et, WBAES_EXT_ENCODING &ee, WBAES_INT_ENCODING &ie, uint32_t *roundkeys) {
+void wbaes_gen_encryption_table(WBAES_ENCRYPTION_TABLE &et, WBAES_EXT_ENCODING &ee, WBAES_INT_ENCODING &ie, uint32_t *roundkeys) {
     uint8_t    t_boxes[10][16][256];
     uint32_t tyi_table[4][256]     ;
 
+    /*
+        Generates Non-linear random encoding table
+            External Encoding - ee
+            Internal Encoding - ie
+    */
     gen_nonlinear_encoding(ee, ie);
 
     /*
         Generates T-boxes depend on round keys, 
             Tyi-table and complex them. 
     */
-    gen_xor_tables(et.r1_xor_tables, et.r2_xor_tables, ee, ie);
     gen_t_boxes(t_boxes, roundkeys);
     gen_tyi_tables(tyi_table);
     composite_t_tyi(t_boxes, tyi_table, et.ty_boxes, et.last_box);
@@ -531,4 +591,5 @@ void gen_encryption_table(WBAES_ENCRYPTION_TABLE &et, WBAES_EXT_ENCODING &ee, WB
         Applies encoding to tables
     */
     apply_encoding(et, ee, ie);
+    gen_xor_tables(et.r1_xor_tables, et.r2_xor_tables, ee, ie);
 }

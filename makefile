@@ -1,10 +1,10 @@
 CC = g++
-FLAGS = -std=c++11 -O2 -Wall -DDEBUG_OUT=1
+FLAGS = -std=c++11 -O2 -Wall -DDEBUG_OUT=0
 LDFLAGS = -std=c++11 -Wall -lntl -lpthread
 SRCDIR  = .
-INCLUDEDIRS = .
+INCLUDEDIRS = ./include
 
-SOURCES  = debug.cpp aes.cpp gf2_mat.cpp wbaes_tables.cpp wbaes.cpp
+SOURCES  = utils.cpp aes.cpp gf.cpp wbaes_tables.cpp wbaes.cpp
 SOURCES += main.cpp
 
 OBJECTS = $(SOURCES:.cpp=.o)
